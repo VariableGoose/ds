@@ -54,43 +54,9 @@ struct HashSetDesc {
 #define hash_set_new(desc) _hash_set_new(desc)
 #define hash_set_free(set) _hash_set_free((void **) &set)
 
-#define _hash_map_desc_default(element_type) (HashSetDesc) {\
-    .element_size = sizeof(element_type), \
-    .hash = fvn1a_hash, \
-    .cmp = memcmp, \
-}
-
-#define hash_set_insert(set, element) do { \
-    if (set == NULL) { \
-        set = hash_set_new(_hash_map_desc_default(set)); \
-    } \
-    __typeof__(element) temp = element; \
-    _hash_set_insert((void **) &set, &temp); \
-} while(0)
-    
-#define hash_set_remove(set, element) do { \
-    if (set == NULL) { \
-        set = hash_set_new(_hash_map_desc_default(set)); \
-    } \
-    __typeof__(element) temp = element; \
-    _hash_set_remove((void **) &set, &temp); \
-} while(0)
-
-#define hash_set_contains(set, element) ({ \
-    if (set == NULL) { \
-        set = hash_set_new(_hash_map_desc_default(set)); \
-    } \
-    __typeof__(element) temp = element; \
-    _hash_set_contains(set, &temp); \
-})
-
-extern size_t hash_set_len(const void *set);
-
-extern void *_hash_set_new(HashSetDesc desc);
-extern void _hash_set_free(void **set);
-extern void _hash_set_insert(void **set, const void *element);
-extern void _hash_set_remove(void **set, const void *element);
-extern bool _hash_set_contains(const void *set, const void *element);
+#define hash_set_insert(set, element)
+#define hash_set_remove(set, element)
+#define hash_set_contains(set, element)
 
 //
 // Private implementation details.
@@ -163,6 +129,50 @@ extern void _vec_insert_arr(void** vec, size_t index, const void* arr, size_t le
 extern void _vec_remove_arr(void** vec, size_t index, size_t len, void *result);
 extern void _vec_insert_fast(void** vec, size_t index, const void* element);
 extern void _vec_remove_fast(void** vec, size_t index, void *result);
+
+//
+// HashSet
+//
+
+#undef hash_set_insert
+#undef hash_set_remove
+#undef hash_set_contains
+
+#define _hash_set_desc_default(element_type) (HashSetDesc) {\
+    .element_size = sizeof(element_type), \
+    .hash = fvn1a_hash, \
+    .cmp = memcmp, \
+}
+
+#define hash_set_insert(set, element) do { \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_set_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_insert((void **) &set, &temp); \
+} while(0)
+    
+#define hash_set_remove(set, element) do { \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_set_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_remove((void **) &set, &temp); \
+} while(0)
+
+#define hash_set_contains(set, element) ({ \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_set_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_contains(set, &temp); \
+})
+
+extern void *_hash_set_new(HashSetDesc desc);
+extern void _hash_set_free(void **set);
+extern void _hash_set_insert(void **set, const void *element);
+extern void _hash_set_remove(void **set, const void *element);
+extern bool _hash_set_contains(const void *set, const void *element);
 
 #ifdef __cplusplus
 }

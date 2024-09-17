@@ -19,12 +19,12 @@ extern size_t fvn1a_hash(const void *data, size_t len);
 // Vector
 //
 
-#define Vec(T) T*
+#define Vec(T) T *
 
-#define vec_free(vec) _vec_free((void**) &vec)
+#define vec_free(vec) _vec_free((void **) &vec)
 
-extern size_t vec_len(const void* vec);
-extern size_t vec_capacity(const void* vec);
+extern size_t vec_len(const void *vec);
+extern size_t vec_capacity(const void *vec);
 
 #define vec_push(vec, element);
 #define vec_pop(vec);
@@ -37,6 +37,60 @@ extern size_t vec_capacity(const void* vec);
 
 #define vec_insert_arr(vec, index, arr, len);
 #define vec_remove_arr(vec, index, len, result);
+
+//
+// HashSet
+//
+
+typedef struct HashSetDesc HashSetDesc;
+struct HashSetDesc {
+    size_t element_size;
+    size_t (*hash)(const void *, size_t);
+    int (*cmp)(const void *, const void *, size_t);
+};
+
+#define HashSet(T) T *
+
+#define hash_set_new(desc) _hash_set_new(desc)
+#define hash_set_free(set) _hash_set_free((void **) &set)
+
+#define _hash_map_desc_default(element_type) (HashSetDesc) {\
+    .element_size = sizeof(element_type), \
+    .hash = fvn1a_hash, \
+    .cmp = memcmp, \
+}
+
+#define hash_set_insert(set, element) do { \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_map_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_insert((void **) &set, &temp); \
+} while(0)
+    
+#define hash_set_remove(set, element) do { \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_map_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_remove((void **) &set, &temp); \
+} while(0)
+
+#define hash_set_contains(set, element) ({ \
+    if (set == NULL) { \
+        set = hash_set_new(_hash_map_desc_default(set)); \
+    } \
+    __typeof__(element) temp = element; \
+    _hash_set_contains(set, &temp); \
+})
+
+extern size_t hash_set_len(const void *set);
+
+extern void *_hash_set_new(HashSetDesc desc);
+extern void _hash_set_free(void **set);
+extern void _hash_set_insert(void **set, const void *element);
+extern void _hash_set_remove(void **set, const void *element);
+extern bool _hash_set_contains(const void *set, const void *element);
 
 //
 // Private implementation details.

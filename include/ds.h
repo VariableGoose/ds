@@ -57,6 +57,74 @@ extern void *hash_set_intersect(const void *a, const void *b);
 extern void *hash_set_difference(const void *a, const void *b);
 
 //
+// HashMap
+//
+
+typedef struct HashMapDesc HashMapDesc;
+struct HashMapDesc {
+    size_t key_size;
+    size_t value_size;
+    const void *zero_value;
+
+    size_t (*hash)(const void *, size_t);
+    int (*cmp)(const void *, const void *, size_t);
+};
+#define hash_map_desc_default(map) (HashMapDesc) { \
+    .key_size = sizeof(map->key), \
+    .value_size = sizeof(map->value), \
+    .hash = fvn1a_hash, \
+    .cmp = memcmp, \
+}
+
+#define HashMap(TKey, TValue) struct { TKey key; TValue value; } *
+
+#define hash_map_new(map, desc) _hash_map_new((void **) &map, desc);
+#define hash_map_free(map) _hash_map_free((void **) &map);
+
+#define hash_map_insert(map, K, V) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    __typeof__(map->value) temp_value = V; \
+    _hash_map_insert((void **) &map, &temp_key, &temp_value); \
+} while (0)
+#define hash_map_set(map, K, V) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    __typeof__(map->value) temp_value = V; \
+    _hash_map_set((void **) &map, &temp_key, &temp_value); \
+} while (0)
+
+#define hash_map_remove(map, K) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    _hash_map_remove((void **) &map, &temp_key); \
+} while (0)
+
+#define hash_map_get(map, K) ({ \
+        if (map == NULL) { \
+            hash_map_new(map, hash_map_desc_default(map)); \
+        } \
+        __typeof__(map->value) result; \
+        __typeof__(map->key) temp_key = K; \
+        _hash_map_get(map, &temp_key, &result); \
+        result; \
+    })
+
+extern void _hash_map_new(void **map, HashMapDesc desc);
+extern void _hash_map_free(void **map);
+extern void _hash_map_insert(void **map, const void *key, const void *value);
+extern void _hash_map_set(void **map, const void *key, const void *value);
+extern void _hash_map_remove(void **map, const void *key);
+extern void _hash_map_get(const void *map, const void *key, void *result);
+extern size_t hash_map_count(const void *map);
+
+//
 // Utils
 //
 

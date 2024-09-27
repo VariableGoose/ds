@@ -1,25 +1,48 @@
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "ds.h"
 
+size_t hash_string(const void *key, size_t size) {
+    (void)size;
+    char *const *_key = key;
+    return fvn1a_hash(*_key, strlen(*_key));
+}
+
+int cmp_string(const void *a, const void *b, size_t size) {
+    (void)size;
+    char *const *_a = a;
+    char *const *_b = b;
+    // printf("%s, %s\n", *_a, *_b);
+    return strcmp(*_a, *_b);
+}
+
 int main(void) {
-    HashSet(int) set = NULL;
+    HashMap(const char *, int) map = NULL;
+    HashMapDesc desc = hash_map_desc_default(map);
+    desc.hash = hash_string;
+    desc.cmp = cmp_string;
+    hash_map_new(map, desc);
 
-    for (int i = 0; i < 128; i++) {
-        hash_set_insert(set, i);
+    for (size_t i = 0; i < 256; i++) {
+        char *str = malloc(8);
+        snprintf(str, 8, "id-%zu", i);
+        hash_map_insert(map, str, i);
     }
 
-    for (size_t i = 0; i < 128; i += 2) {
-        hash_set_remove(set, i);
+    for (size_t i = 0; i < 256; i += 2) {
+        char str[8];
+        snprintf(str, 8, "id-%zu", i);
+        hash_map_remove(map, str);
     }
 
-    for (size_t i = 0; i < 128; i++) {
-        printf("%d", hash_set_contains(set, i));
-    }
-    printf("\n");
+    int life = hash_map_get(map, "id-233");
+    printf("%d\n", life);
 
-    hash_set_free(set);
+    printf("%zu\n", hash_map_count(map));
+
+    hash_map_free(map);
 
     return 0;
 }

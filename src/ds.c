@@ -362,6 +362,211 @@ void *hash_set_difference(const void *a, const void *b) {
 }
 
 //
+// HashMap
+//
+
+typedef enum {
+    HASH_MAP_BUCKET_EMPTY,
+    HASH_MAP_BUCKET_ALIVE,
+    HASH_MAP_BUCKET_DEAD,
+} HashMapBucketState;
+
+typedef struct HashMapHeader HashMapHeader;
+struct HashMapHeader {
+    HashMapDesc desc;
+    HashMapBucketState *states;
+    size_t *hashes;
+    size_t capacity;
+    size_t count;
+    void *zero_value;
+};
+
+#define header_to_hash_map(header) ((void *) header + sizeof(HashMapHeader))
+#define hash_map_to_header(map) ((HashMapHeader *) (map - sizeof(HashMapHeader)))
+#define HASH_MAP_INITIAL_CAPACITY 8
+#define HASH_MAP_FILL_LIMIT 0.75f
+
+void _hash_map_new(void **map, HashMapDesc desc) {
+    if (*map != NULL) {
+        return;
+    }
+
+    size_t bucket_size = desc.key_size+desc.value_size;
+    HashMapHeader *header = malloc(sizeof(HashMapHeader) + HASH_MAP_INITIAL_CAPACITY*bucket_size);
+    *header = (HashMapHeader) {
+        .desc = desc,
+        .states = calloc(HASH_MAP_INITIAL_CAPACITY, sizeof(HashMapBucketState)),
+        .hashes = calloc(HASH_MAP_INITIAL_CAPACITY, sizeof(size_t)),
+        .capacity = HASH_MAP_INITIAL_CAPACITY,
+        .zero_value = malloc(desc.value_size),
+    };
+    if (desc.zero_value != NULL) {
+        memcpy(header->zero_value, desc.zero_value, desc.value_size);
+    } else {
+        memset(header->zero_value, 0, desc.value_size);
+    }
+
+    *map = header_to_hash_map(header);
+}
+
+void _hash_map_free(void **map) {
+    HashMapHeader *header = hash_map_to_header(*map);
+    free(header->states);
+    free(header->hashes);
+    free(header->zero_value);
+    free(header);
+    *map = NULL;
+}
+
+// Returns the index of an empty bucket or an alive bucket matching the key.
+static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t hash) {
+    size_t index = hash % header->capacity;
+
+    void *map = header_to_hash_map(header);
+    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+
+    while (true) {
+        HashMapBucketState state = header->states[index];
+        void *bucket_key = map + index*bucket_size;
+
+        if ((state == HASH_MAP_BUCKET_ALIVE &&
+            header->hashes[index] == hash &&
+            header->desc.cmp(bucket_key, key, header->desc.key_size) == 0) ||
+            state == HASH_MAP_BUCKET_EMPTY) {
+            break;
+        }
+
+        index = (index + 1) % header->capacity;
+    }
+
+    return index;
+}
+
+static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
+    size_t bucket_size = (*header)->desc.key_size+(*header)->desc.value_size;
+    HashMapHeader *new_header = malloc(sizeof(HashMapHeader) + new_capacity*bucket_size);
+    *new_header = **header;
+    new_header->capacity = new_capacity;
+    new_header->states = calloc(new_capacity, sizeof(HashMapBucketState));
+    new_header->hashes = calloc(new_capacity, sizeof(size_t));
+
+    for (size_t i = 0; i < (*header)->capacity; i++) {
+        if ((*header)->states[i] != HASH_MAP_BUCKET_ALIVE) {
+            continue;
+        }
+
+        const void *old_key = header_to_hash_map(*header) + bucket_size*i;
+        size_t index = hash_map_get_bucket(new_header, old_key, (*header)->hashes[i]);
+
+        void *new_key = header_to_hash_map(new_header) + bucket_size*index;
+        memcpy(new_key, old_key, (*header)->desc.key_size);
+
+        const void *old_value = header_to_hash_map(*header) + bucket_size*i + (*header)->desc.key_size;
+        void *new_value = header_to_hash_map(new_header) + bucket_size*index + (*header)->desc.key_size;
+        memcpy(new_value, old_value, (*header)->desc.value_size);
+
+        new_header->hashes[index] = (*header)->hashes[i];
+        new_header->states[index] = HASH_MAP_BUCKET_ALIVE;
+    }
+
+    free((*header)->states);
+    free((*header)->hashes);
+    free(*header);
+    *header = new_header;
+}
+
+void _hash_map_insert(void **map, const void *key, const void *value) {
+    HashMapHeader *header = hash_map_to_header(*map);
+
+    size_t hash = header->desc.hash(key, header->desc.key_size);
+    size_t index = hash_map_get_bucket(header, key, hash);
+    HashMapBucketState *state = &header->states[index];
+    if (*state != HASH_MAP_BUCKET_EMPTY) {
+        return;
+    }
+
+    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    void *bucket_key = *map + index*bucket_size;
+    void *bucket_value = bucket_key+header->desc.key_size;
+
+    memcpy(bucket_key, key, header->desc.key_size);
+    memcpy(bucket_value, value, header->desc.value_size);
+    *state = HASH_MAP_BUCKET_ALIVE;
+    header->hashes[index] = hash;
+
+    header->count++;
+
+    if (header->count >= header->capacity*HASH_MAP_FILL_LIMIT) {
+        hash_map_resize(&header, header->capacity*2);
+        *map = header_to_hash_map(header);
+    }
+}
+
+void _hash_map_set(void **map, const void *key, const void *value) {
+    HashMapHeader *header = hash_map_to_header(*map);
+
+    size_t hash = header->desc.hash(key, header->desc.key_size);
+    size_t index = hash_map_get_bucket(header, key, hash);
+    HashMapBucketState *state = &header->states[index];
+
+    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    void *bucket_key = *map + index*bucket_size;
+    void *bucket_value = bucket_key+header->desc.key_size;
+
+    if (*state == HASH_MAP_BUCKET_EMPTY) {
+        header->count++;
+    }
+
+    memcpy(bucket_key, key, header->desc.key_size);
+    memcpy(bucket_value, value, header->desc.value_size);
+    *state = HASH_MAP_BUCKET_ALIVE;
+    header->hashes[index] = hash;
+}
+
+// NOTE: Could return the removed value to speed up cases
+// where value is needed as well as removal so we save one
+// get operation.
+void _hash_map_remove(void **map, const void *key) {
+    HashMapHeader *header = hash_map_to_header(*map);
+
+    size_t hash = header->desc.hash(key, header->desc.key_size);
+    size_t index = hash_map_get_bucket(header, key, hash);
+    HashMapBucketState *state = &header->states[index];
+    if (*state != HASH_MAP_BUCKET_ALIVE) {
+        return;
+    }
+
+    *state = HASH_MAP_BUCKET_DEAD;
+
+    header->count--;
+
+    if (header->count <= header->capacity/4) {
+        hash_map_resize(&header, header->capacity/2);
+        *map = header_to_hash_map(header);
+    }
+}
+
+void _hash_map_get(const void *map, const void *key, void *result) {
+    HashMapHeader *header = hash_map_to_header(map);
+
+    size_t hash = header->desc.hash(key, header->desc.key_size);
+    size_t index = hash_map_get_bucket(header, key, hash);
+    HashMapBucketState state = header->states[index];
+    if (state != HASH_MAP_BUCKET_ALIVE) {
+        memcpy(result, header->zero_value, header->desc.value_size);
+        return;
+    }
+
+    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    const void *bucket_value = map + index*bucket_size+header->desc.key_size;
+    memcpy(result, bucket_value, header->desc.value_size);
+}
+
+size_t hash_map_count(const void *map) {
+    return hash_map_to_header(map)->count;
+}
+
+//
 // Utils
 //
 

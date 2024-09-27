@@ -5,8 +5,11 @@ A generic implementation of common data structures to make programming in C a li
 ## Implemented data structures:
 - Vector
 - HashSet
+- HashMap
 
 ## TODO:
 - [x] Vector
 - [x] HashSet
-- [ ] HashMap
+- [x] HashMap
+- [ ] Documentation
+- [ ] Examples

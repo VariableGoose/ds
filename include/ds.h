@@ -1,19 +1,13 @@
 #ifndef __DATA_STRUCTURES__
 #define __DATA_STRUCTURES__
 
-#include <string.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stddef.h>
 #include <stdbool.h>
-
-//
-// Utils
-//
-
-extern size_t fvn1a_hash(const void *data, size_t len);
+#include <string.h>
 
 //
 // Vector
@@ -57,6 +51,19 @@ struct HashSetDesc {
 #define hash_set_insert(set, element)
 #define hash_set_remove(set, element)
 #define hash_set_contains(set, element)
+
+extern void *hash_set_union(const void *a, const void *b);
+extern void *hash_set_intersect(const void *a, const void *b);
+extern void *hash_set_difference(const void *a, const void *b);
+
+//
+// Utils
+//
+
+extern size_t fvn1a_hash(const void *data, size_t len);
+
+extern void *hash_set_to_vec(const void *set);
+#define vec_to_hash_set(vec)
 
 //
 // Private implementation details.
@@ -146,15 +153,15 @@ extern void _vec_remove_fast(void** vec, size_t index, void *result);
 
 #define hash_set_insert(set, element) do { \
     if (set == NULL) { \
-        set = hash_set_new(_hash_set_desc_default(set)); \
+        set = hash_set_new(_hash_set_desc_default(*set)); \
     } \
     __typeof__(element) temp = element; \
     _hash_set_insert((void **) &set, &temp); \
 } while(0)
-    
+
 #define hash_set_remove(set, element) do { \
     if (set == NULL) { \
-        set = hash_set_new(_hash_set_desc_default(set)); \
+        set = hash_set_new(_hash_set_desc_default(*set)); \
     } \
     __typeof__(element) temp = element; \
     _hash_set_remove((void **) &set, &temp); \
@@ -162,7 +169,7 @@ extern void _vec_remove_fast(void** vec, size_t index, void *result);
 
 #define hash_set_contains(set, element) ({ \
     if (set == NULL) { \
-        set = hash_set_new(_hash_set_desc_default(set)); \
+        set = hash_set_new(_hash_set_desc_default(*set)); \
     } \
     __typeof__(element) temp = element; \
     _hash_set_contains(set, &temp); \
@@ -173,6 +180,18 @@ extern void _hash_set_free(void **set);
 extern void _hash_set_insert(void **set, const void *element);
 extern void _hash_set_remove(void **set, const void *element);
 extern bool _hash_set_contains(const void *set, const void *element);
+
+//
+// Utils
+//
+
+#undef vec_to_hash_set
+#define vec_to_hash_set(vec) ({ \
+        __typeof__(vec) set = hash_set_new(_hash_set_desc_default(*vec)); \
+        _vec_to_hash_set(vec, &set); \
+        set; \
+    })
+extern void _vec_to_hash_set(const void *vec, void **hash_set);
 
 #ifdef __cplusplus
 }

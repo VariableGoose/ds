@@ -531,27 +531,28 @@ void _hash_map_set(void **map, const void *key, const void *value) {
     header->hashes[index] = hash;
 }
 
-// NOTE: Could return the removed value to speed up cases
-// where value is needed as well as removal so we save one
-// get operation.
-void _hash_map_remove(void **map, const void *key) {
+HashMapIter _hash_map_remove(void **map, const void *key) {
     HashMapHeader *header = hash_map_to_header(*map);
+
+    // Always resize before deleting because the index will be returned and if
+    // the map is resized after remove operation has finished the index will be
+    // invalid.
+    if (header->count <= header->capacity/4) {
+        hash_map_resize(&header, header->capacity/2);
+        *map = header_to_hash_map(header);
+    }
 
     size_t hash = header->desc.hash(key, header->desc.key_size);
     size_t index = hash_map_get_bucket(header, key, hash);
     HashMapBucketState *state = &header->states[index];
     if (*state != HASH_MAP_BUCKET_ALIVE) {
-        return;
+        return header->capacity;
     }
 
     *state = HASH_MAP_BUCKET_DEAD;
-
     header->count--;
 
-    if (header->count <= header->capacity/4) {
-        hash_map_resize(&header, header->capacity/2);
-        *map = header_to_hash_map(header);
-    }
+    return index;
 }
 
 void _hash_map_get(const void *map, const void *key, void *result) {

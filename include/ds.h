@@ -249,13 +249,13 @@ extern bool _hash_set_contains(const void *set, const void *element);
     _hash_map_set((void **) &map, &temp_key, &temp_value); \
 } while (0)
 
-#define hash_map_remove(map, K) do { \
-    if (map == NULL) { \
-        hash_map_new(map, hash_map_desc_default(map)); \
-    } \
-    __typeof__(map->key) temp_key = K; \
-    _hash_map_remove((void **) &map, &temp_key); \
-} while (0)
+#define hash_map_remove(map, K) ({ \
+        if (map == NULL) { \
+            hash_map_new(map, hash_map_desc_default(map)); \
+        } \
+        __typeof__(map->key) temp_key = K; \
+        _hash_map_remove((void **) &map, &temp_key); \
+    })
 
 #define hash_map_get(map, K) ({ \
         if (map == NULL) { \
@@ -271,7 +271,7 @@ extern void _hash_map_new(void **map, HashMapDesc desc);
 extern void _hash_map_free(void **map);
 extern void _hash_map_insert(void **map, const void *key, const void *value);
 extern void _hash_map_set(void **map, const void *key, const void *value);
-extern void _hash_map_remove(void **map, const void *key);
+extern HashMapIter _hash_map_remove(void **map, const void *key);
 extern void _hash_map_get(const void *map, const void *key, void *result);
 extern size_t hash_map_count(const void *map);
 

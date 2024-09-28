@@ -65,6 +65,8 @@ typedef struct HashMapDesc HashMapDesc;
 struct HashMapDesc {
     size_t key_size;
     size_t value_size;
+    size_t bucket_size;
+    size_t value_offset;
     const void *zero_value;
 
     size_t (*hash)(const void *, size_t);
@@ -73,6 +75,8 @@ struct HashMapDesc {
 #define hash_map_desc_default(map) (HashMapDesc) { \
     .key_size = sizeof(map->key), \
     .value_size = sizeof(map->value), \
+    .bucket_size = sizeof(*map), \
+    .value_offset = offsetof(__typeof__(*map), value), \
     .hash = fvn1a_hash, \
     .cmp = memcmp, \
 }
@@ -82,48 +86,17 @@ struct HashMapDesc {
 #define hash_map_new(map, desc) _hash_map_new((void **) &map, desc);
 #define hash_map_free(map) _hash_map_free((void **) &map);
 
-#define hash_map_insert(map, K, V) do { \
-    if (map == NULL) { \
-        hash_map_new(map, hash_map_desc_default(map)); \
-    } \
-    __typeof__(map->key) temp_key = K; \
-    __typeof__(map->value) temp_value = V; \
-    _hash_map_insert((void **) &map, &temp_key, &temp_value); \
-} while (0)
-#define hash_map_set(map, K, V) do { \
-    if (map == NULL) { \
-        hash_map_new(map, hash_map_desc_default(map)); \
-    } \
-    __typeof__(map->key) temp_key = K; \
-    __typeof__(map->value) temp_value = V; \
-    _hash_map_set((void **) &map, &temp_key, &temp_value); \
-} while (0)
+#define hash_map_insert(map, K, V)
+#define hash_map_set(map, K, V)
+#define hash_map_remove(map, K)
+#define hash_map_get(map, K)
 
-#define hash_map_remove(map, K) do { \
-    if (map == NULL) { \
-        hash_map_new(map, hash_map_desc_default(map)); \
-    } \
-    __typeof__(map->key) temp_key = K; \
-    _hash_map_remove((void **) &map, &temp_key); \
-} while (0)
+// Iteration
+typedef size_t HashMapIter;
 
-#define hash_map_get(map, K) ({ \
-        if (map == NULL) { \
-            hash_map_new(map, hash_map_desc_default(map)); \
-        } \
-        __typeof__(map->value) result; \
-        __typeof__(map->key) temp_key = K; \
-        _hash_map_get(map, &temp_key, &result); \
-        result; \
-    })
-
-extern void _hash_map_new(void **map, HashMapDesc desc);
-extern void _hash_map_free(void **map);
-extern void _hash_map_insert(void **map, const void *key, const void *value);
-extern void _hash_map_set(void **map, const void *key, const void *value);
-extern void _hash_map_remove(void **map, const void *key);
-extern void _hash_map_get(const void *map, const void *key, void *result);
-extern size_t hash_map_count(const void *map);
+extern HashMapIter hash_map_iter_new(const void *map);
+extern bool hash_map_iter_valid(const void *map, HashMapIter iter);
+extern HashMapIter hash_map_iter_next(const void *map, HashMapIter iter);
 
 //
 // Utils
@@ -249,6 +222,58 @@ extern void _hash_set_free(void **set);
 extern void _hash_set_insert(void **set, const void *element);
 extern void _hash_set_remove(void **set, const void *element);
 extern bool _hash_set_contains(const void *set, const void *element);
+
+//
+// HashMap
+//
+
+#undef hash_map_insert
+#undef hash_map_set
+#undef hash_map_remove
+#undef hash_map_get
+
+#define hash_map_insert(map, K, V) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    __typeof__(map->value) temp_value = V; \
+    _hash_map_insert((void **) &map, &temp_key, &temp_value); \
+} while (0)
+#define hash_map_set(map, K, V) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    __typeof__(map->value) temp_value = V; \
+    _hash_map_set((void **) &map, &temp_key, &temp_value); \
+} while (0)
+
+#define hash_map_remove(map, K) do { \
+    if (map == NULL) { \
+        hash_map_new(map, hash_map_desc_default(map)); \
+    } \
+    __typeof__(map->key) temp_key = K; \
+    _hash_map_remove((void **) &map, &temp_key); \
+} while (0)
+
+#define hash_map_get(map, K) ({ \
+        if (map == NULL) { \
+            hash_map_new(map, hash_map_desc_default(map)); \
+        } \
+        __typeof__(map->value) result; \
+        __typeof__(map->key) temp_key = K; \
+        _hash_map_get(map, &temp_key, &result); \
+        result; \
+    })
+
+extern void _hash_map_new(void **map, HashMapDesc desc);
+extern void _hash_map_free(void **map);
+extern void _hash_map_insert(void **map, const void *key, const void *value);
+extern void _hash_map_set(void **map, const void *key, const void *value);
+extern void _hash_map_remove(void **map, const void *key);
+extern void _hash_map_get(const void *map, const void *key, void *result);
+extern size_t hash_map_count(const void *map);
 
 //
 // Utils

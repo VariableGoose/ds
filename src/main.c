@@ -25,6 +25,8 @@ int main(void) {
     desc.cmp = cmp_string;
     hash_map_new(map, desc);
 
+    printf("main bucket_size: %zu\n", sizeof(*map));
+
     for (size_t i = 0; i < 256; i++) {
         char *str = malloc(8);
         snprintf(str, 8, "id-%zu", i);
@@ -41,6 +43,12 @@ int main(void) {
     printf("%d\n", life);
 
     printf("%zu\n", hash_map_count(map));
+
+    for (HashMapIter iter = hash_map_iter_new(map);
+        hash_map_iter_valid(map, iter);
+        iter = hash_map_iter_next(map, iter)) {
+        printf("%s: %d\n", map[iter].key, map[iter].value);
+    }
 
     hash_map_free(map);
 

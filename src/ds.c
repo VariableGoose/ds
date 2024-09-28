@@ -399,7 +399,7 @@ void _hash_map_new(void **map, HashMapDesc desc) {
         return;
     }
 
-    size_t bucket_size = desc.key_size+desc.value_size;
+    size_t bucket_size = desc.bucket_size;
     HashMapHeader *header = malloc(sizeof(HashMapHeader) + HASH_MAP_INITIAL_CAPACITY*bucket_size);
     *header = (HashMapHeader) {
         .desc = desc,
@@ -431,7 +431,7 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
     size_t index = hash % header->capacity;
 
     void *map = header_to_hash_map(header);
-    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    size_t bucket_size = header->desc.bucket_size;
 
     while (true) {
         HashMapBucketState state = header->states[index];
@@ -451,7 +451,7 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
 }
 
 static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
-    size_t bucket_size = (*header)->desc.key_size+(*header)->desc.value_size;
+    size_t bucket_size = (*header)->desc.bucket_size;
     HashMapHeader *new_header = malloc(sizeof(HashMapHeader) + new_capacity*bucket_size);
     *new_header = **header;
     new_header->capacity = new_capacity;
@@ -469,8 +469,8 @@ static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
         void *new_key = header_to_hash_map(new_header) + bucket_size*index;
         memcpy(new_key, old_key, (*header)->desc.key_size);
 
-        const void *old_value = header_to_hash_map(*header) + bucket_size*i + (*header)->desc.key_size;
-        void *new_value = header_to_hash_map(new_header) + bucket_size*index + (*header)->desc.key_size;
+        const void *old_value = header_to_hash_map(*header) + bucket_size*i + (*header)->desc.value_offset;
+        void *new_value = header_to_hash_map(new_header) + bucket_size*index + (*header)->desc.value_offset;
         memcpy(new_value, old_value, (*header)->desc.value_size);
 
         new_header->hashes[index] = (*header)->hashes[i];
@@ -493,9 +493,9 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
         return;
     }
 
-    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    size_t bucket_size = header->desc.bucket_size;
     void *bucket_key = *map + index*bucket_size;
-    void *bucket_value = bucket_key+header->desc.key_size;
+    void *bucket_value = bucket_key+header->desc.value_offset;
 
     memcpy(bucket_key, key, header->desc.key_size);
     memcpy(bucket_value, value, header->desc.value_size);
@@ -517,9 +517,9 @@ void _hash_map_set(void **map, const void *key, const void *value) {
     size_t index = hash_map_get_bucket(header, key, hash);
     HashMapBucketState *state = &header->states[index];
 
-    size_t bucket_size = header->desc.key_size+header->desc.value_size;
+    size_t bucket_size = header->desc.bucket_size;
     void *bucket_key = *map + index*bucket_size;
-    void *bucket_value = bucket_key+header->desc.key_size;
+    void *bucket_value = bucket_key+header->desc.value_offset;
 
     if (*state == HASH_MAP_BUCKET_EMPTY) {
         header->count++;
@@ -565,13 +565,41 @@ void _hash_map_get(const void *map, const void *key, void *result) {
         return;
     }
 
-    size_t bucket_size = header->desc.key_size+header->desc.value_size;
-    const void *bucket_value = map + index*bucket_size+header->desc.key_size;
+    size_t bucket_size = header->desc.bucket_size;
+    const void *bucket_value = map + index*bucket_size+header->desc.value_offset;
     memcpy(result, bucket_value, header->desc.value_size);
 }
 
 size_t hash_map_count(const void *map) {
     return hash_map_to_header(map)->count;
+}
+
+// Iteration
+HashMapIter hash_map_iter_new(const void *map) {
+    HashMapHeader *header = hash_map_to_header(map);
+    for (size_t i = 0; i < header->capacity; i++) {
+        if (header->states[i] == HASH_MAP_BUCKET_ALIVE) {
+            return i;
+        }
+    }
+
+    return header->capacity;
+}
+
+bool hash_map_iter_valid(const void *map, HashMapIter iter) {
+    HashMapHeader *header = hash_map_to_header(map);
+    return iter < header->capacity;
+}
+
+HashMapIter hash_map_iter_next(const void *map, HashMapIter iter) {
+    HashMapHeader *header = hash_map_to_header(map);
+    for (size_t i = iter+1; i < header->capacity; i++) {
+        if (header->states[i] == HASH_MAP_BUCKET_ALIVE) {
+            return i;
+        }
+    }
+
+    return header->capacity;
 }
 
 //

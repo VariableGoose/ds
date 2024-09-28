@@ -38,6 +38,14 @@ size_t vec_capacity(const void* vec) {
     return vec_to_header(vec)->capacity;
 }
 
+size_t vec_element_size(const void *vec) {
+    if (vec == NULL) {
+        return 0;
+    }
+
+    return vec_to_header(vec)->element_size;
+}
+
 void _vec_create(void** vec, size_t element_size) {
     if (*vec != NULL) {
         return;

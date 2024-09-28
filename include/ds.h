@@ -19,6 +19,7 @@ extern "C" {
 
 extern size_t vec_len(const void *vec);
 extern size_t vec_capacity(const void *vec);
+extern size_t vec_element_size(const void *vec);
 
 #define vec_push(vec, element);
 #define vec_pop(vec);

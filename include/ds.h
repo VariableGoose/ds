@@ -33,6 +33,8 @@ extern size_t vec_element_size(const void *vec);
 #define vec_insert_arr(vec, index, arr, len);
 #define vec_remove_arr(vec, index, len, result);
 
+#define vec_last(vec) ((vec)[vec_len(vec)-1])
+
 //
 // HashSet
 //

@@ -427,6 +427,10 @@ void _hash_map_new(void **map, HashMapDesc desc) {
 }
 
 void _hash_map_free(void **map) {
+    if (*map == NULL) {
+        return;
+    }
+
     HashMapHeader *header = hash_map_to_header(*map);
     free(header->states);
     free(header->hashes);

@@ -497,6 +497,10 @@ static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
 }
 
 void _hash_map_insert(void **map, const void *key, const void *value) {
+    if (*map == NULL) {
+        return;
+    }
+
     HashMapHeader *header = hash_map_to_header(*map);
 
     size_t hash = header->desc.hash(key, header->desc.key_size);
@@ -524,6 +528,10 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
 }
 
 void _hash_map_set(void **map, const void *key, const void *value) {
+    if (*map == NULL) {
+        return;
+    }
+
     HashMapHeader *header = hash_map_to_header(*map);
 
     size_t hash = header->desc.hash(key, header->desc.key_size);
@@ -545,6 +553,10 @@ void _hash_map_set(void **map, const void *key, const void *value) {
 }
 
 HashMapIter _hash_map_remove(void **map, const void *key) {
+    if (*map == NULL) {
+        return -1;
+    }
+
     HashMapHeader *header = hash_map_to_header(*map);
 
     // Always resize before deleting because the index will be returned and if
@@ -605,6 +617,10 @@ size_t hash_map_count(const void *map) {
 
 // Iteration
 HashMapIter hash_map_iter_new(const void *map) {
+    if (map == NULL) {
+        return -1;
+    }
+
     HashMapHeader *header = hash_map_to_header(map);
     for (size_t i = 0; i < header->capacity; i++) {
         if (header->states[i] == HASH_MAP_BUCKET_ALIVE) {
@@ -616,11 +632,19 @@ HashMapIter hash_map_iter_new(const void *map) {
 }
 
 bool hash_map_iter_valid(const void *map, HashMapIter iter) {
+    if (map == NULL) {
+        return false;
+    }
+
     HashMapHeader *header = hash_map_to_header(map);
     return iter < header->capacity;
 }
 
 HashMapIter hash_map_iter_next(const void *map, HashMapIter iter) {
+    if (map == NULL) {
+        return -1;
+    }
+
     HashMapHeader *header = hash_map_to_header(map);
     for (size_t i = iter+1; i < header->capacity; i++) {
         if (header->states[i] == HASH_MAP_BUCKET_ALIVE) {

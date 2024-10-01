@@ -98,7 +98,12 @@ void _vec_insert_arr(void** vec, size_t index, const void* arr, size_t len) {
     void *dest = (*vec) + index*header->element_size;
 
     memmove(end, dest, (header->len - index)*header->element_size);
-    memcpy(dest, arr, len*header->element_size);
+    if (arr == NULL) {
+        memset(dest, 0, len*header->element_size);
+    } else {
+        memcpy(dest, arr, len*header->element_size);
+    }
+
 
     header->len += len;
 }
@@ -128,7 +133,11 @@ void _vec_insert_fast(void** vec, size_t index, const void* element) {
     void *dest = (*vec) + index*header->element_size;
 
     memcpy(end, dest, header->element_size);
-    memcpy(dest, element, header->element_size);
+    if (element == NULL) {
+        memset(dest, 0, header->element_size);
+    } else {
+        memcpy(dest, element, header->element_size);
+    }
 
     header->len += 1;
 }

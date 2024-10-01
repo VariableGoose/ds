@@ -571,6 +571,21 @@ void _hash_map_get(const void *map, const void *key, void *result) {
     memcpy(result, bucket_value, header->desc.value_size);
 }
 
+void *_hash_map_getp(void *map, const void *key) {
+    HashMapHeader *header = hash_map_to_header(map);
+
+    size_t hash = header->desc.hash(key, header->desc.key_size);
+    size_t index = hash_map_get_bucket(header, key, hash);
+    HashMapBucketState state = header->states[index];
+    if (state != HASH_MAP_BUCKET_ALIVE) {
+        return NULL;
+    }
+
+    size_t bucket_size = header->desc.bucket_size;
+    void *bucket_value = map + index*bucket_size+header->desc.value_offset;
+    return bucket_value;
+}
+
 size_t hash_map_count(const void *map) {
     return hash_map_to_header(map)->count;
 }

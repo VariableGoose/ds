@@ -86,10 +86,13 @@ struct HashMapDesc {
 #define hash_map_new(map, desc) _hash_map_new((void **) &map, desc);
 #define hash_map_free(map) _hash_map_free((void **) &map);
 
+extern size_t hash_map_count(const void *map);
+
 #define hash_map_insert(map, K, V)
 #define hash_map_set(map, K, V)
 #define hash_map_remove(map, K)
 #define hash_map_get(map, K)
+#define hash_map_getp(map, K)
 
 // Iteration
 typedef size_t HashMapIter;
@@ -231,6 +234,7 @@ extern bool _hash_set_contains(const void *set, const void *element);
 #undef hash_map_set
 #undef hash_map_remove
 #undef hash_map_get
+#undef hash_map_getp
 
 #define hash_map_insert(map, K, V) do { \
     if (map == NULL) { \
@@ -267,13 +271,23 @@ extern bool _hash_set_contains(const void *set, const void *element);
         result; \
     })
 
+#define hash_map_getp(map, K) ({ \
+        if (map == NULL) { \
+            hash_map_new(map, hash_map_desc_default(map)); \
+        } \
+        __typeof__(map->value) *result; \
+        __typeof__(map->key) temp_key = K; \
+        result = _hash_map_getp(map, &temp_key); \
+        result; \
+    })
+
 extern void _hash_map_new(void **map, HashMapDesc desc);
 extern void _hash_map_free(void **map);
 extern void _hash_map_insert(void **map, const void *key, const void *value);
 extern void _hash_map_set(void **map, const void *key, const void *value);
 extern HashMapIter _hash_map_remove(void **map, const void *key);
 extern void _hash_map_get(const void *map, const void *key, void *result);
-extern size_t hash_map_count(const void *map);
+extern void *_hash_map_getp(void *map, const void *key);
 
 //
 // Utils

@@ -15,6 +15,7 @@ extern "C" {
 
 #define Vec(T) T *
 
+extern void *vec_new(size_t element_size);
 #define vec_free(vec) _vec_free((void **) &vec)
 
 extern size_t vec_len(const void *vec);
@@ -134,14 +135,14 @@ extern void *hash_set_to_vec(const void *set);
 
 #define vec_insert(vec, index, element) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         __typeof__(element) temp = element; \
         _vec_insert_arr((void**) &vec, index, &temp, 1); \
     })
 #define vec_remove(vec, index) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         __typeof__(*vec) result; \
         _vec_remove_arr((void**) &vec, index, 1, &result); \
@@ -150,14 +151,14 @@ extern void *hash_set_to_vec(const void *set);
 
 #define vec_insert_fast(vec, index, element) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         __typeof__(element) temp = element; \
         _vec_insert_fast((void**) &vec, index, &temp); \
     })
 #define vec_remove_fast(vec, index) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         __typeof__(*vec) result; \
         _vec_remove_fast((void**) &vec, index, &result); \
@@ -166,18 +167,17 @@ extern void *hash_set_to_vec(const void *set);
 
 #define vec_insert_arr(vec, index, arr, len) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         _vec_insert_arr((void**) &vec, index, arr, len); \
     })
 #define vec_remove_arr(vec, index, len, result) ({ \
         if (vec == NULL) { \
-            _vec_create((void**) &vec, sizeof(*vec)); \
+            vec = vec_new(sizeof(*vec)); \
         } \
         _vec_remove_arr((void**) &vec, index, len, result); \
     })
 
-extern void _vec_create(void** vec, size_t element_size);
 extern void _vec_free(void** vec);
 extern void _vec_insert_arr(void** vec, size_t index, const void* arr, size_t len);
 extern void _vec_remove_arr(void** vec, size_t index, size_t len, void *result);

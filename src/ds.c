@@ -46,18 +46,14 @@ size_t vec_element_size(const void *vec) {
     return vec_to_header(vec)->element_size;
 }
 
-void _vec_create(void** vec, size_t element_size) {
-    if (*vec != NULL) {
-        return;
-    }
-
+void *vec_new(size_t element_size) {
     VecHeader *header = malloc(sizeof(VecHeader) + element_size*VEC_INITIAL_CAPACITY);
     *header = (VecHeader) {
         .element_size = element_size,
         .capacity = VEC_INITIAL_CAPACITY,
     };
 
-    *vec = header_to_vec(header);
+    return header_to_vec(header);
 }
 
 void _vec_free(void** vec) {
@@ -671,8 +667,7 @@ size_t fvn1a_hash(const void *data, size_t len) {
 
 void *hash_set_to_vec(const void *set) {
     const HashSetHeader *set_header = set;
-    void *vec = NULL;
-    _vec_create(&vec, set_header->desc.element_size);
+    void *vec = vec_new(set_header->desc.element_size);
 
     for (size_t i = 0; i < set_header->capacity; i++) {
         if (set_header->statuses[i] == HASH_SET_SLOT_ALIVE) {

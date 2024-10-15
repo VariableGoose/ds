@@ -4,47 +4,54 @@
 
 #include "ds.h"
 
-size_t hash_string(const void *key, size_t size) {
-    (void)size;
-    char *const *_key = key;
-    return fvn1a_hash(*_key, strlen(*_key));
-}
-
-int cmp_string(const void *a, const void *b, size_t size) {
-    (void)size;
-    char *const *_a = a;
-    char *const *_b = b;
-    return strcmp(*_a, *_b);
+static void print_set(const HashSet(int) set) {
+    printf("{");
+    size_t j = 0;
+    for (HashSetIter i = hash_set_iter_new(set);
+            hash_set_iter_valid(set, i);
+            i = hash_set_iter_next(set, i)) {
+        printf("%d", set[i]);
+        if (j < hash_set_count(set) - 1) {
+            printf(", ");
+        }
+        j++;
+    }
+    printf("}\n");
 }
 
 int main(void) {
-    HashMap(const char *, int) map = NULL;
-    HashMapDesc desc = hash_map_desc_default(map);
-    desc.hash = hash_string;
-    desc.cmp = cmp_string;
-    hash_map_new(map, desc);
-
-    for (size_t i = 0; i < 64; i++) {
-        char *str = malloc(8);
-        snprintf(str, 8, "id-%zu", i);
-        hash_map_insert(map, str, i);
+    HashSet(int) a = NULL;
+    for (int i = 0; i < 10; i++) {
+        hash_set_insert(a, i);
     }
+    hash_set_insert(a, 0);
+    printf("a: ");
+    print_set(a);
 
-    for (size_t i = 0; i < 64; i += 2) {
-        char str[8];
-        snprintf(str, 8, "id-%zu", i);
-        HashMapIter i = hash_map_remove(map, str);
-        free((void *) map[i].key);
+    HashSet(int) b = NULL;
+    for (int i = 3; i < 7; i++) {
+        hash_set_insert(b, i);
     }
+    printf("b: ");
+    print_set(b);
 
-    for (HashMapIter iter = hash_map_iter_new(map);
-        hash_map_iter_valid(map, iter);
-        iter = hash_map_iter_next(map, iter)) {
-        printf("%s: %d\n", map[iter].key, map[iter].value);
-        free((void *) map[iter].key);
-    }
+    HashSet(int) unionn = hash_set_union(a, b);
+    printf("union: ");
+    print_set(unionn);
+    hash_set_free(unionn);
 
-    hash_map_free(map);
+    HashSet(int) intersect = hash_set_intersect(a, b);
+    printf("intersect: ");
+    print_set(intersect);
+    hash_set_free(intersect);
+
+    HashSet(int) diff = hash_set_difference(a, b);
+    printf("difference: ");
+    print_set(diff);
+    hash_set_free(diff);
+
+    hash_set_free(a);
+    hash_set_free(b);
 
     return 0;
 }

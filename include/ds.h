@@ -49,8 +49,10 @@ struct HashSetDesc {
 
 #define HashSet(T) T *
 
-#define hash_set_new(desc) _hash_set_new(desc)
+extern void *hash_set_new(HashSetDesc desc);
 #define hash_set_free(set) _hash_set_free((void **) &set)
+extern size_t hash_set_capacity(const void *set);
+extern size_t hash_set_count(const void *set);
 
 #define hash_set_insert(set, element)
 #define hash_set_remove(set, element)
@@ -59,6 +61,13 @@ struct HashSetDesc {
 extern void *hash_set_union(const void *a, const void *b);
 extern void *hash_set_intersect(const void *a, const void *b);
 extern void *hash_set_difference(const void *a, const void *b);
+
+// Iteration
+typedef size_t HashSetIter;
+
+extern HashSetIter hash_set_iter_new(const void *set);
+extern bool hash_set_iter_valid(const void *set, HashSetIter iter);
+extern HashSetIter hash_set_iter_next(const void *set, HashSetIter iter);
 
 //
 // HashMap
@@ -222,7 +231,6 @@ extern void _vec_remove_fast(void** vec, size_t index, void *result);
     _hash_set_contains(set, &temp); \
 })
 
-extern void *_hash_set_new(HashSetDesc desc);
 extern void _hash_set_free(void **set);
 extern void _hash_set_insert(void **set, const void *element);
 extern void _hash_set_remove(void **set, const void *element);

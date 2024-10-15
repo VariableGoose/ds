@@ -732,7 +732,7 @@ size_t fvn1a_hash(const void *data, size_t len) {
 }
 
 void *hash_set_to_vec(const void *set) {
-    const HashSetHeader *set_header = set;
+    const HashSetHeader *set_header = hash_set_to_header(set);
     void *vec = vec_new(set_header->desc.element_size);
 
     for (size_t i = 0; i < set_header->capacity; i++) {

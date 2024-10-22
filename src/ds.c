@@ -457,6 +457,7 @@ struct HashMapHeader {
     size_t *hashes;
     size_t capacity;
     size_t count;
+    size_t non_empty_buckets;
     void *zero_value;
 };
 
@@ -532,6 +533,7 @@ static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
     new_header->capacity = new_capacity;
     new_header->states = calloc(new_capacity, sizeof(HashMapBucketState));
     new_header->hashes = calloc(new_capacity, sizeof(size_t));
+    new_header->non_empty_buckets = 0;
 
     for (size_t i = 0; i < (*header)->capacity; i++) {
         if ((*header)->states[i] != HASH_MAP_BUCKET_ALIVE) {
@@ -550,6 +552,7 @@ static void hash_map_resize(HashMapHeader **header, size_t new_capacity) {
 
         new_header->hashes[index] = (*header)->hashes[i];
         new_header->states[index] = HASH_MAP_BUCKET_ALIVE;
+        new_header->non_empty_buckets++;
     }
 
     free((*header)->states);
@@ -582,8 +585,9 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
     header->hashes[index] = hash;
 
     header->count++;
+    header->non_empty_buckets++;
 
-    if (header->count >= header->capacity*HASH_MAP_FILL_LIMIT) {
+    if (header->non_empty_buckets >= header->capacity*HASH_MAP_FILL_LIMIT) {
         hash_map_resize(&header, header->capacity*2);
         *map = header_to_hash_map(header);
     }
@@ -606,6 +610,7 @@ void _hash_map_set(void **map, const void *key, const void *value) {
 
     if (*state == HASH_MAP_BUCKET_EMPTY) {
         header->count++;
+        header->non_empty_buckets++;
     }
 
     memcpy(bucket_key, key, header->desc.key_size);
@@ -624,7 +629,7 @@ HashMapIter _hash_map_remove(void **map, const void *key) {
     // Always resize before deleting because the index will be returned and if
     // the map is resized after remove operation has finished the index will be
     // invalid.
-    if (header->count <= header->capacity/4) {
+    if (header->non_empty_buckets <= header->capacity/4) {
         hash_map_resize(&header, header->capacity/2);
         *map = header_to_hash_map(header);
     }

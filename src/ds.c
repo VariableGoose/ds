@@ -617,6 +617,11 @@ void _hash_map_set(void **map, const void *key, const void *value) {
     memcpy(bucket_value, value, header->desc.value_size);
     *state = HASH_MAP_BUCKET_ALIVE;
     header->hashes[index] = hash;
+
+    if (header->non_empty_buckets >= header->capacity*HASH_MAP_FILL_LIMIT) {
+        hash_map_resize(&header, header->capacity*2);
+        *map = header_to_hash_map(header);
+    }
 }
 
 HashMapIter _hash_map_remove(void **map, const void *key) {

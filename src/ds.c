@@ -508,10 +508,15 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
 
     void *map = header_to_hash_map(header);
     size_t bucket_size = header->desc.bucket_size;
+    size_t collisions = 0;
 
     while (true) {
         HashMapBucketState state = header->states[index];
         void *bucket_key = map + index*bucket_size;
+
+        if (collisions == 0 && state == HASH_MAP_BUCKET_DEAD) {
+            break;
+        }
 
         if ((state == HASH_MAP_BUCKET_ALIVE &&
             header->hashes[index] == hash &&
@@ -521,6 +526,7 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
         }
 
         index = (index + 1) % header->capacity;
+        collisions++;
     }
 
     return index;
@@ -571,8 +577,10 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
     size_t hash = header->desc.hash(key, header->desc.key_size);
     size_t index = hash_map_get_bucket(header, key, hash);
     HashMapBucketState *state = &header->states[index];
-    if (*state != HASH_MAP_BUCKET_EMPTY) {
+    if (*state == HASH_MAP_BUCKET_ALIVE) {
         return;
+    } else if (*state == HASH_MAP_BUCKET_DEAD) {
+        header->non_empty_buckets++;
     }
 
     size_t bucket_size = header->desc.bucket_size;
@@ -585,7 +593,6 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
     header->hashes[index] = hash;
 
     header->count++;
-    header->non_empty_buckets++;
 
     if (header->non_empty_buckets >= header->capacity*HASH_MAP_FILL_LIMIT) {
         hash_map_resize(&header, header->capacity*2);
@@ -609,8 +616,11 @@ void _hash_map_set(void **map, const void *key, const void *value) {
     void *bucket_value = bucket_key+header->desc.value_offset;
 
     if (*state == HASH_MAP_BUCKET_EMPTY) {
-        header->count++;
         header->non_empty_buckets++;
+    }
+
+    if (*state != HASH_MAP_BUCKET_ALIVE) {
+        header->count++;
     }
 
     memcpy(bucket_key, key, header->desc.key_size);
@@ -634,7 +644,8 @@ HashMapIter _hash_map_remove(void **map, const void *key) {
     // Always resize before deleting because the index will be returned and if
     // the map is resized after remove operation has finished the index will be
     // invalid.
-    if (header->non_empty_buckets <= header->capacity/4) {
+    if (header->capacity > HASH_MAP_INITIAL_CAPACITY &&
+            header->non_empty_buckets <= header->capacity/4) {
         hash_map_resize(&header, header->capacity/2);
         *map = header_to_hash_map(header);
     }

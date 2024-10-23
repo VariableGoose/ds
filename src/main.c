@@ -21,10 +21,11 @@
 
 int main(void) {
     HashMap(int, int) map = NULL;
+
     for (int i = 0; i < 128; i++) {
-        hash_map_set(map, 0, 1);
-        hash_map_remove(map, 0);
+        hash_map_insert(map, i, 1);
     }
+
     hash_map_free(map);
 
     return 0;

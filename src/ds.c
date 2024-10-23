@@ -579,7 +579,7 @@ void _hash_map_insert(void **map, const void *key, const void *value) {
     HashMapBucketState *state = &header->states[index];
     if (*state == HASH_MAP_BUCKET_ALIVE) {
         return;
-    } else if (*state == HASH_MAP_BUCKET_DEAD) {
+    } else if (*state == HASH_MAP_BUCKET_EMPTY) {
         header->non_empty_buckets++;
     }
 

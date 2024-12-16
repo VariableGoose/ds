@@ -508,16 +508,14 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
 
     void *map = header_to_hash_map(header);
     size_t bucket_size = header->desc.bucket_size;
-    size_t collisions = 0;
 
     while (true) {
         HashMapBucketState state = header->states[index];
         void *bucket_key = map + index*bucket_size;
 
-        if (collisions == 0 && state == HASH_MAP_BUCKET_DEAD) {
-            break;
-        }
-
+        // We can't return dead bucekts because if an alive bucket, which is
+        // the one we're looking for is right after it's going to be reported
+        // as not in the hash map.
         if ((state == HASH_MAP_BUCKET_ALIVE &&
             header->hashes[index] == hash &&
             header->desc.cmp(bucket_key, key, header->desc.key_size) == 0) ||
@@ -526,7 +524,6 @@ static size_t hash_map_get_bucket(HashMapHeader *header, const void *key, size_t
         }
 
         index = (index + 1) % header->capacity;
-        collisions++;
     }
 
     return index;

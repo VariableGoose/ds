@@ -154,6 +154,9 @@ void _vec_remove_fast(void** vec, size_t index, void *result) {
 }
 
 void vec_clear(void *vec) {
+    if (vec == NULL) {
+        return;
+    }
     VecHeader *header = vec_to_header(vec);
     header->len = 0;
 }

@@ -21,6 +21,7 @@ extern void *vec_new(size_t element_size);
 extern size_t vec_len(const void *vec);
 extern size_t vec_capacity(const void *vec);
 extern size_t vec_element_size(const void *vec);
+extern void vec_clear(void *vec);
 
 #define vec_push(vec, element);
 #define vec_pop(vec);
